@@ -1,8 +1,8 @@
-import {expect} from "chai";
-import {ethers, upgrades} from "hardhat";
+import { expect } from "chai";
+import { ethers, upgrades } from "hardhat";
 
 describe("TlandToken", function () {
-    it("Should return the new greeting once it's changed", async function () {
+    it("Should instantiate token", async function () {
         const TlandToken = await ethers.getContractFactory("TlandToken");
         const token = await upgrades.deployProxy(TlandToken, []);
         await token.deployed();
