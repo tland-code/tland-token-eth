@@ -121,6 +121,10 @@ ERC20VotesUpgradeable, OwnableUpgradeable, UUPSUpgradeable, IERC1363Upgradeable,
     override(ERC20Upgradeable, ERC20VotesUpgradeable)
     {
         super._afterTokenTransfer(from, to, amount);
+        // Track votes only for non contract addresses
+        if(to != address(0) && !to.isContract() && delegates(to) == address(0)) {
+            _delegate(to, to);
+        }
     }
 
     function _mint(address to, uint256 amount)
