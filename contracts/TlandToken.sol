@@ -22,7 +22,7 @@ contract TlandToken is Initializable, ERC20Upgradeable, ERC20BurnableUpgradeable
 ERC20VotesUpgradeable, OwnableUpgradeable, UUPSUpgradeable, IERC1363Upgradeable, ERC165Upgradeable {
     using AddressUpgradeable for address;
 
-    function initialize() initializer public {
+    function initialize() public initializer {
         __ERC20_init("Tland Token", "TLAND");
         __ERC20Burnable_init();
         __ERC20Permit_init("Tland Token");
