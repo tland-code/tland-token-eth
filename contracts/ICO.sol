@@ -13,6 +13,7 @@ import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
 /**
  * @title ICO
  */
+// TODO: test, add parameters updates, deploy on Goerli testnet, query tokens contributions and purchasedAmount
 contract ICO is Ownable, EIP712 {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;

@@ -13,6 +13,7 @@ import "@openzeppelin/contracts-upgradeable/interfaces/IERC1363Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/interfaces/IERC1363SpenderUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/interfaces/IERC1363ReceiverUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 
 /**
  * @title TlandToken
@@ -21,6 +22,13 @@ import "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 contract TlandToken is Initializable, ERC20Upgradeable, ERC20BurnableUpgradeable, ERC20PermitUpgradeable,
 ERC20VotesUpgradeable, OwnableUpgradeable, UUPSUpgradeable, IERC1363Upgradeable, ERC165Upgradeable {
     using AddressUpgradeable for address;
+    using SafeMathUpgradeable for uint256;
+
+    uint256 public buyFee;
+    uint256 public sellFee;
+    address public feeWallet;
+    mapping(address => bool) public isPair;
+    mapping(address => bool) public isExcludedFromFee;
 
     function initialize() public initializer {
         __ERC20_init("Tland Token", "TLAND");
@@ -28,6 +36,15 @@ ERC20VotesUpgradeable, OwnableUpgradeable, UUPSUpgradeable, IERC1363Upgradeable,
         __ERC20Permit_init("Tland Token");
         __Ownable_init();
         __UUPSUpgradeable_init();
+
+        // Set default parameters
+        buyFee = 5;
+        sellFee = 5;
+        feeWallet = owner();
+
+        // Exclude owner and this contract from fee
+        isExcludedFromFee[owner()] = true;
+        isExcludedFromFee[address(this)] = true;
 
         _mint(msg.sender, 100_000_000 * 10 ** decimals());
     }
@@ -108,13 +125,66 @@ ERC20VotesUpgradeable, OwnableUpgradeable, UUPSUpgradeable, IERC1363Upgradeable,
         return (retval == IERC1363SpenderUpgradeable(spender).onApprovalReceived.selector);
     }
 
+    function addPair(address pair) external onlyOwner {
+        isPair[pair] = true;
+    }
+
+    function removePair(address pair) external onlyOwner {
+        isPair[pair] = false;
+    }
+
+    function setFeeWallet(address feeWalletAddress) external onlyOwner {
+        feeWallet = feeWalletAddress;
+    }
+
+    function setBuyFee(uint256 fee) external onlyOwner {
+        require(fee <= 10, "buy fee should be in 0 - 10");
+        buyFee = fee;
+    }
+
+    function setSellFee(uint256 fee) external onlyOwner {
+        require(fee <= 10, "sell fee should be in 0 - 10");
+        sellFee = fee;
+    }
+
+    function setExcludeFromFee(address account, bool excluded) external onlyOwner {
+        isExcludedFromFee[account] = excluded;
+    }
+
     function _authorizeUpgrade(address newImplementation)
     internal
     onlyOwner
     override
     {}
 
-    // The following functions are overrides required by Solidity.
+    // Based on https://github.com/OpenZeppelin/openzeppelin-contracts/issues/3093#issuecomment-1008329227
+    function _transfer(
+        address from,
+        address to,
+        uint256 amount
+    ) internal virtual override {
+        // Calculate fee only on swaps
+        if (_isSwap(from, to) && !isExcludedFromFee[from] && !isExcludedFromFee[to]) {
+            uint256 fee = _calculateFee(to, amount);
+            super._transfer(from, feeWallet, fee);
+            amount -= fee;
+        }
+
+        super._transfer(from, to, amount);
+    }
+
+    function _isSwap(address from, address to) private view returns (bool) {
+        return isPair[from] || isPair[to];
+    }
+
+    function _isSelling(address recipient) private view returns (bool) {
+        return isPair[recipient];
+    }
+
+    function _calculateFee(address to, uint256 amount) private view returns (uint256) {
+        uint256 percentFee = _isSelling(to) ? sellFee : buyFee;
+        return amount.mul(percentFee).div(100);
+    }
 
     function _afterTokenTransfer(address from, address to, uint256 amount)
     internal
