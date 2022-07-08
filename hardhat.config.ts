@@ -52,7 +52,7 @@ const config: HardhatUserConfig = {
     alphaSort: true,
     runOnCompile: true,
     disambiguatePaths: false,
-  }
+  },
 };
 
 export default config;

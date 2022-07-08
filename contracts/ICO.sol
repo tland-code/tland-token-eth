@@ -10,6 +10,15 @@ import "@openzeppelin/contracts/utils/structs/EnumerableMap.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
 
+error InvalidAddress();
+error ClosingTimeMustBeGreaterThanOpeningTime();
+error AcceptedTokensLimitExceeded();
+error ICOClosed();
+error NotAcceptedPaymentToken();
+error CapExceeded();
+error InvalidPaymentTokenDecimals();
+error InvalidSignature();
+
 /**
  * @title ICO
  */
@@ -17,15 +26,6 @@ import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
 contract ICO is Ownable, EIP712 {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
-
-    error InvalidAddress();
-    error ClosingTimeMustBeGreaterThanOpeningTime();
-    error AcceptedTokensLimitExceeded();
-    error ICOClosed();
-    error NotAcceptedPaymentToken();
-    error CapExceeded();
-    error InvalidPaymentTokenDecimals();
-    error InvalidSignature();
 
     uint8 private constant _ACCEPTED_PAYMENT_TOKENS_LIMIT = 5;
     uint8 private constant _PAYMENT_TOKENS_DECIMALS = 6;
@@ -47,7 +47,9 @@ contract ICO is Ownable, EIP712 {
 
     mapping(address => TokenDeposit) private _contributions;
     TokenDeposit private _totalContribution;
-    uint256 totalPurchasedTokens;
+
+    mapping(address => uint256) public purchasedTokens;
+    uint256 public totalPurchasedTokens;
 
     event BuyWithPermission(address indexed paymentToken, uint256 paidAmount, uint256 purchasedAmount);
 
@@ -125,6 +127,7 @@ contract ICO is Ownable, EIP712 {
         _totalContribution.perToken[paymentToken] += amount;
 
         totalPurchasedTokens += amountToBuy;
+        purchasedTokens[_msgSender()] += amountToBuy;
 
         emit BuyWithPermission(paymentToken, amount, amountToBuy);
     }
@@ -143,6 +146,34 @@ contract ICO is Ownable, EIP712 {
 
     function acceptedPaymentTokens() public view returns (address[] memory) {
         return _acceptedPaymentTokens;
+    }
+
+    function totalContribution() public view returns (uint256, address[] memory, uint256[] memory) {
+        address[] memory tokens = new address[](_acceptedPaymentTokens.length);
+        uint256[] memory amounts = new uint256[](_acceptedPaymentTokens.length);
+
+        for (uint i = 0; i < _acceptedPaymentTokens.length; i++) {
+            address token = _acceptedPaymentTokens[i];
+            uint256 depositAmount = _totalContribution.perToken[token];
+            tokens[i] = token;
+            amounts[i] = depositAmount;
+        }
+
+        return (_totalContribution.total, tokens, amounts);
+    }
+
+    function contribution(address account) public view returns (uint256, address[] memory, uint256[] memory) {
+        address[] memory tokens = new address[](_acceptedPaymentTokens.length);
+        uint256[] memory amounts = new uint256[](_acceptedPaymentTokens.length);
+
+        for (uint i = 0; i < _acceptedPaymentTokens.length; i++) {
+            address token = _acceptedPaymentTokens[i];
+            uint256 depositAmount = _contributions[account].perToken[token];
+            tokens[i] = token;
+            amounts[i] = depositAmount;
+        }
+
+        return (_contributions[account].total, tokens, amounts);
     }
 
     function _addressIsValid(address addr) internal pure returns (bool) {

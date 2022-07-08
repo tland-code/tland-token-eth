@@ -6,7 +6,7 @@ async function main() {
   console.log("Deploying contracts with the account:", deployer.address);
 
   // We get the contract to deploy
-  const TlandToken = await ethers.getContractFactory("TlandTokenMintable");
+  const TlandToken = await ethers.getContractFactory("TlandToken");
   const instance = await upgrades.deployProxy(TlandToken, []);
 
   await instance.deployed();
