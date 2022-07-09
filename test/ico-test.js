@@ -27,7 +27,7 @@ describe("ICO", function () {
   const authorizer = Wallet.generate();
 
   beforeEach(async function () {
-    const [, wallet, user1, user2] = await ethers.getSigners();
+    const [, wallet, user] = await ethers.getSigners();
 
     const openingTime = (await ethers.provider.getBlock("latest")).timestamp;
     const closingTime = openingTime + 1000;
@@ -41,19 +41,11 @@ describe("ICO", function () {
 
     // Transfer tokens to users
     await usdtToken.transfer(
-      user1.address,
+      user.address,
       ethers.utils.parseUnits("1000000", 6)
     );
     await usdcToken.transfer(
-      user1.address,
-      ethers.utils.parseUnits("1000000", 6)
-    );
-    await usdtToken.transfer(
-      user2.address,
-      ethers.utils.parseUnits("1000000", 6)
-    );
-    await usdcToken.transfer(
-      user2.address,
+      user.address,
       ethers.utils.parseUnits("1000000", 6)
     );
 
@@ -72,8 +64,17 @@ describe("ICO", function () {
     chainId = (await ico.getChainId()).toNumber();
   });
 
+  it("Should instantiate ICO contract", async function () {
+    expect(await ico.totalPurchasedTokens()).to.equal(0);
+    expect(await ico.cap()).to.equal(ethers.utils.parseUnits("10000000", 18));
+    expect(await ico.tokenPrice()).to.equal(ethers.utils.parseUnits("0.05", 6));
+    expect(await ico.authorizer()).to.equal(
+      authorizer.getChecksumAddressString()
+    );
+  });
+
   it("Should buy tokens", async function () {
-    const [, , user1] = await ethers.getSigners();
+    const [, , user] = await ethers.getSigners();
 
     // Data used to create signature according to EIP721
     const data = {
@@ -89,7 +90,7 @@ describe("ICO", function () {
         verifyingContract: ico.address,
       },
       message: {
-        user: user1.address,
+        user: user.address,
       },
     };
 
@@ -101,12 +102,12 @@ describe("ICO", function () {
 
     // Increasing allowance before transfer funds
     await usdtToken
-      .connect(user1)
+      .connect(user)
       .increaseAllowance(ico.address, ethers.utils.parseUnits("1000", 6));
 
     // Buy with permission
     await ico
-      .connect(user1)
+      .connect(user)
       .buyWithPermission(
         usdtToken.address,
         ethers.utils.parseUnits("1000", 6),
@@ -116,13 +117,38 @@ describe("ICO", function () {
       );
 
     // Check state
-    expect(await ico.contribution(user1.address)).to.deep.equal([
+    expect(await ico.contribution(user.address)).to.deep.equal([
       ethers.utils.parseUnits("1000", 6),
       [usdtToken.address, usdcToken.address],
       [ethers.utils.parseUnits("1000", 6), ethers.utils.parseUnits("0", 6)],
     ]);
-    expect(await ico.purchasedTokens(user1.address)).to.equal(
+    expect(await ico.purchasedTokens(user.address)).to.equal(
       ethers.utils.parseUnits("20000", 18)
+    );
+
+    // Increasing allowance before transfer funds
+    await usdcToken
+      .connect(user)
+      .increaseAllowance(ico.address, ethers.utils.parseUnits("200", 6));
+
+    // Buy another tokens for 200 USDC
+    await ico
+      .connect(user)
+      .buyWithPermission(
+        usdcToken.address,
+        ethers.utils.parseUnits("200", 6),
+        v,
+        r,
+        s
+      );
+
+    expect(await ico.contribution(user.address)).to.deep.equal([
+      ethers.utils.parseUnits("1200", 6),
+      [usdtToken.address, usdcToken.address],
+      [ethers.utils.parseUnits("1000", 6), ethers.utils.parseUnits("200", 6)],
+    ]);
+    expect(await ico.purchasedTokens(user.address)).to.equal(
+      ethers.utils.parseUnits("24000", 18)
     );
   });
 });
