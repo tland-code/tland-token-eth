@@ -22,7 +22,6 @@ error InvalidSignature();
 /**
  * @title ICO
  */
-// TODO: test, add parameters updates, deploy on Goerli testnet, query tokens contributions and purchasedAmount
 contract ICO is Ownable, EIP712 {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
@@ -30,7 +29,7 @@ contract ICO is Ownable, EIP712 {
     uint8 private constant _ACCEPTED_PAYMENT_TOKENS_LIMIT = 5;
     uint8 private constant _PAYMENT_TOKENS_DECIMALS = 6;
     uint8 private constant _TOKEN_DECIMALS = 18;
-    bytes32 private constant _WHITELIST_TYPEHASH = keccak256("whitelist(address user)");
+    bytes32 private constant _WHITELIST_TYPEHASH = keccak256("Whitelist(address user)");
 
     uint256 public cap;
     uint256 public openingTime;
@@ -130,6 +129,35 @@ contract ICO is Ownable, EIP712 {
         purchasedTokens[_msgSender()] += amountToBuy;
 
         emit BuyWithPermission(paymentToken, amount, amountToBuy);
+    }
+
+    function setCap(uint256 capValue) external onlyOwner {
+        cap = capValue;
+    }
+
+    function setOpeningTime(uint256 time) external onlyOwner {
+        openingTime = time;
+    }
+
+    function setClosingTime(uint256 time) external onlyOwner {
+        closingTime = time;
+    }
+
+    function setTokenPrice(uint256 price) external onlyOwner {
+        tokenPrice = price;
+    }
+
+    function setWallet(address walletAddress) external onlyOwner {
+        wallet = walletAddress;
+    }
+
+    function setAuthorizer(address authorizerAddress) external onlyOwner {
+        authorizer = authorizerAddress;
+    }
+
+    function setAcceptedPaymentTokens(address[] memory tokens) external onlyOwner {
+        if (tokens.length > _ACCEPTED_PAYMENT_TOKENS_LIMIT) revert AcceptedTokensLimitExceeded();
+        _acceptedPaymentTokens = tokens;
     }
 
     function isOpen() public view returns (bool) {
