@@ -1,4 +1,4 @@
-require('dotenv').config()
+require("dotenv").config();
 
 module.exports = [
   process.env.WALLET_ADDRESS,
@@ -7,5 +7,5 @@ module.exports = [
   process.env.OPENING_TIME,
   process.env.CLOSING_TIME,
   process.env.TOKEN_PRICE,
-  [process.env.ACCEPTED_PAYMENT_TOKEN],
+  [process.env.USDT_TOKEN, process.env.USDC_TOKEN],
 ];

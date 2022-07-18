@@ -8,7 +8,8 @@ const env = load({
   OPENING_TIME: Number,
   CLOSING_TIME: Number,
   TOKEN_PRICE: Number,
-  ACCEPTED_PAYMENT_TOKEN: String,
+  USDT_TOKEN: String,
+  USDC_TOKEN: String,
 });
 
 async function main() {
@@ -25,7 +26,7 @@ async function main() {
     env.OPENING_TIME,
     env.CLOSING_TIME,
     env.TOKEN_PRICE,
-    [env.ACCEPTED_PAYMENT_TOKEN]
+    [env.USDT_TOKEN, env.USDC_TOKEN]
   );
 
   await instance.deployed();
